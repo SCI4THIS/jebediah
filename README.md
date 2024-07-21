@@ -1,1 +1,1 @@
-# jebidiah
+# Jebediah

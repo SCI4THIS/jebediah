@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Jebediah</title>
+<script src="tarball.js">
+</script>
+<script>
+var g = {
+
+  modules_i: 0,
+  modules_n: 9999,
+  modules: { },
+
+  dataurls_i: 0,
+  dataurls_n: 9999,
+  dataurls: { },
+
+  finished_cb: function() { main(); },
+  is_staging: true,
+  tar_hash: { },
+}
+
+function main()
+{
+  let sysjs      = g.modules["./sys.js"].sysjs;
+  let init_gl    = g.modules["./gl.js"].init_gl;
+  let load_wasm3 = g.modules["./wasm3-wasm.js"].load_wasm3;
+  let wasm3      = g.dataurls["./wasm3-asyncify.wasm"];
+
+  load_wasm3(wasm3, sysjs);
+  init_gl("canvas");
+}
+
+function start_check()
+{
+  if (g.modules_i == g.modules_n && g.dataurls_i == g.dataurls_n) {
+    g.finished_cb();
+  }
+}
+
+function require(filename)
+{
+  let require_cb = function(text)
+  {
+    let module = { exports: { } };
+    eval(text);
+    g.modules[filename] = module.exports;
+    g.modules_i++;
+    start_check();
+  };
+  if (g.is_staging) {
+    fetch(filename).then(function(resp) { return resp.text(); }).then(require_cb);
+  } else {
+    g.tar_hash[filename].text().then(require_cb);
+  }
+}
+
+function requires(filenames)
+{
+  let n = filenames.length;
+  g.modules_n = n;
+  for (let i=0; i<n; i++) {
+    require(filenames[i]);
+  }
+}
+
+function dataurl(filename)
+{
+  let dataurl_cb = function(blob)
+  {
+    let reader = new FileReader();
+    reader.onload = function (e) {
+        let url = e.target.result;
+        if (url.substr(0,29) == "data:application/octet-stream") {
+          let tmp = url.substr(29);
+          url = "data:application/wasm" + tmp;
+	}
+        console.log(url);
+        g.dataurls[filename] = url;
+        g.dataurls_i++;
+        start_check();
+    }
+    reader.readAsDataURL(blob);
+  };
+  if (g.is_staging) {
+    fetch(filename).then(function(resp) { return resp.blob(); }).then(dataurl_cb);
+  } else {
+    dataurl_cb(g.tar_hash[filename]);
+  }
+}
+
+function dataurls(filenames)
+{
+  let n = filenames.length;
+  g.dataurls_n = n;
+  for (let i=0; i<n; i++) {
+    dataurl(filenames[i]);
+  }
+}
+
+function gunzip_jebediah(response)
+{
+    return response.body.pipeThrough(new DecompressionStream("gzip"));
+}
+
+function untar_jebediah(stream)
+{
+    return new Response(stream).blob();
+}
+
+function unblob_jebediah(blob)
+{
+    tar = new tarball.TarReader();
+    return tar.readFile(blob);
+
+}
+
+function tar_hash_jebediah(tar_array)
+{
+    for (let i=0; i<tar_array.length; i++) {
+        let filename = tar_array[i].name;
+        g.tar_hash[filename] = tar.getFileBlob(filename);
+    }
+    run();
+}
+
+
+function run() {
+  requires([ "./gl.js", "./sys.js", "./wasm3-wasm.js"]);
+  dataurls([ "./wasm3-asyncify.wasm" ]);
+}
+
+function start() {
+  if (!g.is_staging) {
+  fetch(
+"jebediah.tar.gz"
+)
+    .then(gunzip_jebediah)
+    .then(untar_jebediah)
+    .then(unblob_jebediah)
+    .then(tar_hash_jebediah)
+  } else {
+    run();
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="canvas" style="position: absolute; right: 0px; bottom: 0px;">
+</canvas>
+<div id="target">
+<script>
+/* window.onload doesn't work as expected on mobile.
+ * workaround by executing this at end */
+start();
+</script>
+</div>
+</body>
+</html>

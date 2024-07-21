@@ -1,0 +1,3 @@
+[submodule "tarballjs"]
+	path = tarballjs
+	url = https://github.com/ankitrohatgi/tarballjs
