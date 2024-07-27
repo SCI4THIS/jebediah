@@ -18,17 +18,23 @@ var g = {
   finished_cb: function() { main(); },
   is_staging: true,
   tar_hash: { },
+
+  wasm3: { },
 }
 
 function main()
 {
   let sysjs      = g.modules["./sys.js"].sysjs;
   let init_gl    = g.modules["./gl.js"].init_gl;
-  let load_wasm3 = g.modules["./wasm3-wasm.js"].load_wasm3;
-  let wasm3      = g.dataurls["./wasm3-asyncify.wasm"];
+  let wasm3_run  = g.modules["./wasm3-wasm.js"].run;
+  let wasm3_url  = g.dataurls["./wasm3-asyncify.wasm"];
+  let hello_url  = g.dataurls["./hello.wasm"];
+  let wasm3      = wasm3_run(fetch(wasm3_url), sysjs, fetch(hello_url));
 
-  load_wasm3(wasm3, sysjs);
+  g.wasm3["./hello.wasm"] = wasm3;
+
   init_gl("canvas");
+
 }
 
 function start_check()
@@ -127,7 +133,7 @@ function tar_hash_jebediah(tar_array)
 
 function run() {
   requires([ "./gl.js", "./sys.js", "./wasm3-wasm.js"]);
-  dataurls([ "./wasm3-asyncify.wasm" ]);
+  dataurls([ "./wasm3-asyncify.wasm", "./hello.wasm" ]);
 }
 
 function start() {

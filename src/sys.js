@@ -1,10 +1,27 @@
 var memory_tail = 0;
 let sysjs = function (g) {
 
+
+  let strcpy = function (i32_1, i32_2) {
+    let dst = i32_1;
+    let src = i32_2;
+    let i   = 0;
+    console.log("strcpy(" + i32_1 + "," + i32_2 + ")");
+    while (g.memory[src + i] != 0) {
+      g.memory[dst + i] = g.memory[src + i];
+      i++;
+    }
+    g.memory[dst + i] = 0;
+    return src + i; /* This function returns a pointer to the terminating null byte
+                       of the copied string */
+  };
+
   let memmove = function (i32_1, i32_2, i32_3) {
       let dst = i32_1;
       let src = i32_2;
       let n   = i32_3;
+
+      console.log("memmove(" + i32_1 + "," + i32_2 + "," + i32_3 + ")");
 
       if (src == dst) {
         return dst;
@@ -27,6 +44,7 @@ let sysjs = function (g) {
       let dst = i32_1;
       let val = i32_2;
       let n   = i32_3;
+      console.log("memset(" + i32_1 + "," + i32_2 + "," + i32_3 + ")");
       for (let i=0; i<n; i++) {
         g.memory[dst + i] = val;
       }
@@ -36,6 +54,7 @@ let sysjs = function (g) {
   let strlen = function(i32_1) {
       let src = i32_1;
       let i   = 0;
+      console.log("strlen(" + i32_1 + ")");
       while (g.memory[src + i] != 0) {
         i++;
       }
@@ -46,6 +65,7 @@ let sysjs = function (g) {
       let src = i32_1;
       let n   = i32_2;
       let i   = 0;
+      console.log("strnlen(" + i32_1 + "," + i32_2 + ")");
       while (g.memory[src + i] != 0 && i < n) {
         i++;
       }
@@ -91,6 +111,7 @@ let sysjs = function (g) {
     let s1  = i32_1;
     let s2  = i32_2;
     let i   = 0;
+    console.log("strcmp(" + i32_1 + "," + i32_2 + ")");
     while (g.memory[s1 + i] != 0 && g.memory[s1 + i] == g.memory[s2 + i]) {
       i++;
     }
@@ -122,6 +143,7 @@ let sysjs = function (g) {
   let calloc = function(i32_1, i32_2) {
     let n = i32_1 * i32_2;
     let p = malloc(n);
+    console.log("calloc(" + i32_1 + "," + i32_2 + ")");
     for (let i=0; i<n; i++) {
       g.memory[p + i] = 0;
     }
@@ -133,6 +155,7 @@ let sysjs = function (g) {
     let size    = i32_2;
     let ptr_new = malloc(size);
     let n       = size; /* should be original allocated sizeo of ptr */
+    console.log("realloc(" + i32_1 + "," + i32_2 + ")");
     for (let i=0; i<n; i++) {
       if (ptr + i > g.memory.length) {
         break;
@@ -147,12 +170,77 @@ let sysjs = function (g) {
     let p1  = i32_1;
     let p2  = i32_2;
     let n   = i32_3;
-    let i   = 0;
-    while (i < n && g.memory[p1 + i] == g.memory[p2 + i]) {
+    console.log("memcmp(" + i32_1 + "," + i32_2 + "," + i32_3 + ")");
+    for (let i=0; i<n; i++) {
+      let res = g.memory[p1 + i] - g.memory[p2 + i];
+      /* 0 = s1/s2 equal; <0 = s1 < s2; >0 s1 > s2 */
+      if (res != 0) { return res; }
+    }
+    return 0;
+  };
+
+  let str_c = function(p) {
+    let s = "";
+    let i = 0;
+    while (g.memory[p + i] != 0) {
+      s += String.fromCharCode(g.memory[p + i]);
       i++;
     }
-    return g.memory[p1 + i] - g.memory[p2 + i]; /* 0 = s1/s2 equal; <0 = s1 < s2; >0 s1 > s2 */
+    return s;
+  }
+
+  let c_str = function(s) {
+    let data = malloc(s.length + 1);
+    for (let i=0; i<s.length; i++) {
+      g.memory[data + i] = s.charCodeAt(i);
+    }
+    g.memory[data + s.length] = 0;
+    return data;
   };
+
+  let c_getp = function(ps, i) {
+    let ix = i * 4;
+    let res = 0;
+    for (let j=4; j-->0;) {
+      res = res * 256;
+      res += g.memory[ps + ix + j];
+    }
+    return res;
+  }
+
+  let c_getlp = function(ps, i) {
+    let ix = i * 8;
+    let res = 0;
+    for (let j=8; j-->0;) {
+      res = res * 256;
+      res += g.memory[ps + ix + j];
+	    console.log("g.memory:", ps + ix + j, g.memory[ps + ix + j]);
+    }
+    return res;
+  }
+
+  let c_setp = function(ps, i, p) {
+    let ix = i * 4;
+    //for (let j=4; j-->0;) {
+    for (let j=0; j<4; j++) {
+      g.memory[ps + ix + j] = p % 256;
+      p = p / 256;
+    }
+  };
+
+  let c_argv = function(arr_s) {
+    let data = malloc(4 * arr_s.length);
+    for (let i=0; i<arr_s.length; i++) {
+      let s = c_str(arr_s[i]);
+      c_setp(data, i, s);
+    }
+    return data;
+  };
+
+  let printf = function(i32_1, i32_2) {
+    console.log("printf: " + str_c(i32_1));
+  }
+
 
   let strtoul = function(i32_1, i32_2, i32_3) {
     let s    = i32_1;
@@ -270,17 +358,23 @@ let sysjs = function (g) {
       putc:          fputc,
       realloc:       realloc,
       strcmp:        strcmp,
+      strcpy:        strcpy,
       strlen:        strlen,
       strnlen:       strnlen,
       strtod:        strtod,
       strtoul:       strtoul,
       strtoull:      strtoul,
       vsnprintf:     vsnprintf,
+      c_str:         c_str,
+      c_argv:        c_argv,
+      c_setp:        c_setp,
+      c_getp:        c_getp,
+      c_getlp:       c_getlp,
+      str_c:         str_c,
+      printf:        printf,
   };
 }
 
 module.exports.sysjs       = sysjs;
 module.exports.memory_tail = memory_tail;
-
-
 

@@ -1,10 +1,12 @@
 #!/bin/bash
 
 cp tarballjs/tarball.js src/tarball.js
-cp src/gl.js tar-staging/gl.js
-cp src/sys.js tar-staging/sys.js
-cp src/wasm3-wasm.js tar-staging/wasm3-wasm.js
-cp src/wasm3-asyncify.wasm tar-staging/wasm3-asyncify.wasm
+
+for file in "gl.js" "sys.js" "wasm3-wasm.js" "wasm3-asyncify.wasm" "hello.wasm"
+do
+  cp src/${file} tar-staging/${file}
+done
+
 tar -czvf src/jebediah.tar.gz -C tar-staging/ .
 
 echo "\"data:application/wasm;base64,`base64 --wrap=0 src/jebediah.tar.gz`\"" > jebediah.tar.gz.b64
