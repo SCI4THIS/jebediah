@@ -1,3 +1,6 @@
 [submodule "tarballjs"]
 	path = tarballjs
 	url = https://github.com/ankitrohatgi/tarballjs
+[submodule "wasm3"]
+	path = wasm3
+	url = https://github.com/wasm3/wasm3

@@ -111,7 +111,7 @@ let sysjs = function (g) {
     let s1  = i32_1;
     let s2  = i32_2;
     let i   = 0;
-    console.log("strcmp(" + i32_1 + "," + i32_2 + ")");
+    console.log("strcmp(" + str_c(i32_1) + "," + str_c(i32_2) + ")");
     while (g.memory[s1 + i] != 0 && g.memory[s1 + i] == g.memory[s2 + i]) {
       i++;
     }
@@ -156,6 +156,9 @@ let sysjs = function (g) {
     let ptr_new = malloc(size);
     let n       = size; /* should be original allocated sizeo of ptr */
     console.log("realloc(" + i32_1 + "," + i32_2 + ")");
+    if (ptr == 0) {
+      return ptr_new;
+    }
     for (let i=0; i<n; i++) {
       if (ptr + i > g.memory.length) {
         break;

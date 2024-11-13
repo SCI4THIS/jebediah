@@ -1,6 +1,11 @@
 #!/bin/bash
 
+#./compile-hello.sh
+#./compile-wasm3.sh
+
 cp tarballjs/tarball.js src/tarball.js
+
+mkdir -p tar-staging
 
 for file in "gl.js" "sys.js" "wasm3-wasm.js" "wasm3-asyncify.wasm" "hello.wasm"
 do
@@ -19,3 +24,4 @@ mv tmp3.js index.html
 rm tmp2.js
 rm tmp1.js
 rm jebediah.tar.gz.b64
+rm src/jebediah.tar.gz
