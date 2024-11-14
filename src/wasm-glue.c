@@ -32,13 +32,13 @@ fxn_prototype_t build_fxn_prototypes(int len, char **names, char **args)
   p += header_size;
   for (i=0; i<len; i++) {
     strcpy(p, names[i]);
-    res->name = p;
+    res[i].name = p;
     p += strlen(names[i]);
     *p = '\0';
     p++;
 
     strcpy(p, args[i]);
-    res->args = p;
+    res[i].args = p;
     p += strlen(args[i]);
     *p = '\0';
     p++;
@@ -76,6 +76,10 @@ M3Result run_wasm(const unsigned char *wasm, size_t wasm_len, const char *module
 
   for (i=0; i<import_fxn_len; i++) {
     result = m3_LinkRawFunctionEx(module, "env", import_fxn_names[i], import_fxn_args[i], injector_fxn, &prototypes[i]);
+    if (result == m3Err_functionLookupFailed) {
+      /* Probably supplied an import function that the program doesn't need. */
+      continue;
+    }
     if (result) { return result; }
   }
 

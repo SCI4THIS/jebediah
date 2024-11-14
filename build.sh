@@ -2,12 +2,13 @@
 
 #./compile-hello.sh
 #./compile-wasm3.sh
+#./compile-sleep.sh
 
 cp tarballjs/tarball.js src/tarball.js
 
 mkdir -p tar-staging
 
-for file in "gl.js" "sys.js" "wasm3-wasm.js" "wasm3-asyncify.wasm" "hello.wasm"
+for file in "gl.js" "sys.js" "wasm3-wasm.js" "wasm3-asyncify.wasm" "hello.wasm" "sleep.wasm"
 do
   cp src/${file} tar-staging/${file}
 done

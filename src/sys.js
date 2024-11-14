@@ -1,6 +1,144 @@
 var memory_tail = 0;
 let sysjs = function (g) {
 
+let s_printf_d = function(modifier, data, output_type)
+{
+  let left_align = false;
+  let zero_pad = false;
+  let i = 0;
+  let data_orig = data;
+  if (modifier[i] == '-') {
+    left_align = true;
+    i++;
+  }
+  if (modifier[i] == '0') {
+    zero_pad = true;
+    i++;
+  }
+  let width = 0;
+  if (i >= modifier.length) {
+  } else if (modifier[i] == '*') {
+    width = (1 << 24) * g.memory[data + 3] +
+            (1 << 16) * g.memory[data + 2] +
+            (1 <<  8) * g.memory[data + 1] +
+            (1 <<  0) * g.memory[data + 0];
+    data += 4;
+  } else if ('1' <= modifier[i] && modifier[i] <= '9') {
+    width = Number(modifier.substr(i));
+  } else {
+    console.error("Unhandled modifier: " + modifier);
+  }
+
+  let n = (1 << 24) * g.memory[data + 3] +
+          (1 << 16) * g.memory[data + 2] +
+          (1 <<  8) * g.memory[data + 1] +
+          (1 <<  0) * g.memory[data + 0];
+  data += 4;
+
+  let s;
+  if (output_type == 'd') {
+    s = n.toString(10);
+  } else if (output_type == 'x') {
+    s = n.toString(16);
+  } else if (output_type == 'X') {
+    s = n.toString(16).toUpperCase();
+  }
+  if (width != 0) {
+    let adjust = width - s.length;
+    for (let i=0; i<adjust; i++) {
+      if (left_align) {
+        s = s + " ";
+      } else if (zero_pad) {
+        s = "0" + s;
+      } else {
+        s = " " + s;
+      }
+    }
+  }
+
+  return { s: s, n: data - data_orig };
+}
+
+let s_from_printf = function(i32_1, i32_2, i32_3)
+{
+  let fmt = i32_1;
+  let data = i32_2;
+  let n = i32_3;
+  if (n == undefined) {
+    n = 0;
+  }
+  let s = "";
+  let i = 0;
+  let modifier = "";
+  while (g.memory[fmt + i] != 0) {
+    let c = String.fromCharCode(g.memory[fmt + i]);
+    if (c != '%') {
+      s += String.fromCharCode(g.memory[fmt + i]);
+      i++;
+      if (n > 0 && i >= n) { return s; }
+      modifier = "";
+      continue;
+    }
+    let is_modifier = false;
+    i++;
+    if (n > 0 && i >= n) { return s; }
+    do {
+      c = String.fromCharCode(g.memory[fmt + i]);
+      is_modifier = false;
+      switch (c) {
+        case '%': s += "%"; break;
+        case '-':
+        case '*':
+        case ' ':
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+          modifier += c;
+          is_modifier = true;
+          break;
+        case 'd':
+        case 'x':
+        case 'X':
+          res = s_printf_d(modifier, data, c);
+          data += res.n;
+          s += res.s;
+          break;
+        case 'p':
+          res = s_printf_d("08X", data, 'X');
+          data += res.n;
+          s += "0x" + res.s;
+          break;
+        case 'c':
+          let cc = (1 << 24) * g.memory[data + 3] +
+                   (1 << 16) * g.memory[data + 2] +
+                   (1 <<  8) * g.memory[data + 1] +
+                   (1 <<  0) * g.memory[data + 0];
+          data += 4;
+          s += String.fromCharCode(cc);
+          break;
+        case 's':
+          let s_n = (1 << 24) * g.memory[data + 3] +
+                    (1 << 16) * g.memory[data + 2] +
+                    (1 <<  8) * g.memory[data + 1] +
+                    (1 <<  0) * g.memory[data + 0];
+          data += 4;
+          let s_c = g.memory[s_n];
+          while (s_c != 0) {
+            s += String.fromCharCode(s_c);
+            s_n++;
+            s_c = g.memory[s_n];
+          }
+          break;
+        default:
+          s += "%" + modifier + c;
+          break;
+      }
+      i++;
+      if (n > 0 && i >= n) { return s; }
+    } while (is_modifier);
+  }
+  return s;
+}
+
 
   let strcpy = function (i32_1, i32_2) {
     let dst = i32_1;
@@ -14,6 +152,30 @@ let sysjs = function (g) {
     g.memory[dst + i] = 0;
     return src + i; /* This function returns a pointer to the terminating null byte
                        of the copied string */
+  };
+
+  let strlen = function(i32_1) {
+      let src = i32_1;
+      let i   = 0;
+      console.log("strlen(" + i32_1 + ")");
+      while (g.memory[src + i] != 0) {
+        i++;
+      }
+      return i;
+  };
+
+
+  let strcat = function (i32_1, i32_2, i32_3) {
+    let dst     = i32_1;
+    let src     = i32_2;
+    let n       = i32_3;
+    let dst_len = strlen(dst);
+    let i   = 0;
+    for (i=0; i<n && g.memory[src + i] != 0; i++) {
+      g.memory[dst + dst_len + i] = g.memory[src + i];
+    }
+    g.memory[dst + dst_len + i] = 0;
+    return dst;
   };
 
   let memmove = function (i32_1, i32_2, i32_3) {
@@ -51,16 +213,6 @@ let sysjs = function (g) {
       return dst;
   };
 
-  let strlen = function(i32_1) {
-      let src = i32_1;
-      let i   = 0;
-      console.log("strlen(" + i32_1 + ")");
-      while (g.memory[src + i] != 0) {
-        i++;
-      }
-      return i;
-  };
-
   let strnlen = function(i32_1, i32_2) {
       let src = i32_1;
       let n   = i32_2;
@@ -83,12 +235,21 @@ let sysjs = function (g) {
   };
 
   let vsnprintf = function(i32_1, i32_2, i32_3, i32_4) {
-    let str    = i32_1;
-    let size   = i32_2;
+    let dst    = i32_1;
+    let n      = i32_2;
     let format = i32_3;
     let ap     = i32_4;
     let i      = 0; /* number of characters printed. */
     console.log("vsnprintf(" + i32_1 + "," + i32_2 + "," + i32_3 + "," + i32_4 + ")");
+    let s = s_from_printf(i32_3, i32_4, i32_2);
+    for (i=0; i<s.length; i++) {
+      g.memory[dst + i] = s.charCodeAt(i);
+      i++;
+    }
+    if (i < i32_2) {
+      g.memory[dst + i] = 0;
+    }
+    console.log("->" + s);
     return i;
   };
 
@@ -217,7 +378,6 @@ let sysjs = function (g) {
     for (let j=8; j-->0;) {
       res = res * 256;
       res += g.memory[ps + ix + j];
-	    console.log("g.memory:", ps + ix + j, g.memory[ps + ix + j]);
     }
     return res;
   }
@@ -240,8 +400,44 @@ let sysjs = function (g) {
     return data;
   };
 
+  let snprintf = function(i32_1, i32_2, i32_3, i32_4) {
+    let s = s_from_printf(i32_3, i32_4, i32_2);
+    let dst = i32_1;
+    let i   = 0;
+    console.log("snprintf(" + i32_1 + "," + i32_2 + "," + i32_3 + "," + i32_4 + ")");
+    for (i=0; i<s.length; i++) {
+      g.memory[dst + i] = s.charCodeAt(i);
+      i++;
+    }
+    if (i < i32_2) {
+      g.memory[dst + i] = 0;
+    }
+    return i;
+  }
+
+  let sprintf = function(i32_1, i32_2, i32_3) {
+    let s = s_from_printf(i32_2, i32_3)
+    let dst = i32_1;
+    let i   = 0;
+    console.log("sprintf(" + i32_1 + "," + i32_2 + "," + i32_3 + ")");
+    for (i=0; i<s.length; i++) {
+      g.memory[dst + i] = s.charCodeAt(i);
+      i++;
+    }
+    g.memory[dst + i] = 0;
+    return i;
+  }
+
+  let fprintf = function(i32_1, i32_2, i32_3) {
+    console.log("fprintf: (" + i32_1 + "): " + s_from_printf(i32_2, i32_3));
+  }
+
   let printf = function(i32_1, i32_2) {
-    console.log("printf: " + str_c(i32_1));
+    console.log("printf: " + s_from_printf(i32_1, i32_2));
+  }
+
+  let sleep = function(i32_1) {
+    console.log("sleep: " + i32_1);
   }
 
 
@@ -375,6 +571,11 @@ let sysjs = function (g) {
       c_getlp:       c_getlp,
       str_c:         str_c,
       printf:        printf,
+      fprintf:       fprintf,
+      sleep:         sleep,
+      snprintf:      snprintf,
+      sprintf:       sprintf,
+      strcat:        strcat,
   };
 }
 
