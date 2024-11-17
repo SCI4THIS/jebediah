@@ -1,0 +1,13 @@
+diff --git a/variables.h b/variables.h
+index 55f497de..5e6dd1a2 100644
+--- a/variables.h
++++ b/variables.h
+@@ -438,7 +438,7 @@ extern void sv_winsize PARAMS((char *));
+ #endif
+ 
+ #if defined (__CYGWIN__)
+-extern void sv_home PARAMS((char *));
++extern int sv_home PARAMS((char *));
+ #endif
+ 
+ #if defined (HISTORY)

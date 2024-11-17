@@ -30,11 +30,14 @@ function main()
   let wasm3_url   = g.dataurls["./wasm3-asyncify.wasm"];
   let hello_url   = g.dataurls["./hello.wasm"];
   let sleep_url   = g.dataurls["./sleep.wasm"];
+  let bash_url    = g.dataurls["./bash.wasm"];
   let hello_wasm3 = wasm3_run(fetch(wasm3_url), sysjs, fetch(hello_url));
   let sleep_wasm3 = wasm3_run(fetch(wasm3_url), sysjs, fetch(sleep_url));
+  let bash_wasm3  = wasm3_run(fetch(wasm3_url), sysjs, fetch(bash_url));
 
   g.wasm3["./hello.wasm"] = hello_wasm3;
   g.wasm3["./sleep.wasm"] = sleep_wasm3;
+  g.wasm3["./bash.wasm"]  = bash_wasm3;
 
   init_gl("canvas");
 
@@ -136,7 +139,7 @@ function tar_hash_jebediah(tar_array)
 
 function run() {
   requires([ "./gl.js", "./sys.js", "./wasm3-wasm.js" ]);
-  dataurls([ "./wasm3-asyncify.wasm", "./hello.wasm", "./sleep.wasm" ]);
+  dataurls([ "./wasm3-asyncify.wasm", "./hello.wasm", "./sleep.wasm", "./bash.wasm" ]);
 }
 
 function start() {

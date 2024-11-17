@@ -4,3 +4,6 @@
 [submodule "wasm3"]
 	path = wasm3
 	url = https://github.com/wasm3/wasm3
+[submodule "bash"]
+	path = bash
+	url = https://git.savannah.gnu.org/git/bash.git
